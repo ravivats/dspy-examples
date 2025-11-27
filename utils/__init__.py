@@ -5,7 +5,7 @@ Common utilities for DSPy demo project.
 import os
 import dspy
 from dotenv import load_dotenv
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 
 # Load environment variables
 load_dotenv()
@@ -42,13 +42,13 @@ def setup_azure_openai_lm(model: str = "gpt-4o", max_tokens: int = 1000) -> dspy
 
     Expects the following environment variables:
     - AZURE_OPENAI_API_KEY
-    - AZURE_OPENAI_ENDPOINT
+    - AZURE_OPENAI_ENDPOINT Example: https://your-resource-name.cognitiveservices.azure.com/
     - AZURE_OPENAI_API_VERSION (optional, defaults to 2024-02-15-preview)
     - AZURE_OPENAI_DEPLOYMENT_NAME (optional, overrides 'model' argument if set)
     """
     api_key = os.getenv("AZURE_OPENAI_API_KEY")
     endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION")
 
     # In Azure, the "model" usually refers to the specific Deployment Name
     deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", model)
