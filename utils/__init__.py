@@ -26,7 +26,7 @@ def setup_openai_lm(model: str = "gpt-4o", max_tokens: int = 1000) -> dspy.LM:
     lm_config = {
         "model": f"openai/{model}",
         "api_key": api_key,
-        "max_tokens": max_tokens
+        "max_tokens": max_tokens,
     }
 
     # Only add organization if it's explicitly set and valid
@@ -36,17 +36,52 @@ def setup_openai_lm(model: str = "gpt-4o", max_tokens: int = 1000) -> dspy.LM:
     return dspy.LM(**lm_config)
 
 
-def setup_anthropic_lm(model: str = "claude-3-haiku-20240307", max_tokens: int = 1000) -> dspy.LM:
+def setup_azure_openai_lm(model: str = "gpt-4o", max_tokens: int = 1000) -> dspy.LM:
+    """
+    Set up Azure OpenAI language model.
+
+    Expects the following environment variables:
+    - AZURE_OPENAI_API_KEY
+    - AZURE_OPENAI_ENDPOINT
+    - AZURE_OPENAI_API_VERSION (optional, defaults to 2024-02-15-preview)
+    - AZURE_OPENAI_DEPLOYMENT_NAME (optional, overrides 'model' argument if set)
+    """
+    api_key = os.getenv("AZURE_OPENAI_API_KEY")
+    endpoint = os.getenv("AZURE_OPENAI_ENDPOINT")
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview")
+
+    # In Azure, the "model" usually refers to the specific Deployment Name
+    deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME", model)
+    print_step(
+        f"Using Azure OpenAI deployment: {deployment_name}, version:{api_version}"
+    )
+
+    if not api_key:
+        raise ValueError("AZURE_OPENAI_API_KEY not found in environment variables")
+    if not endpoint:
+        raise ValueError("AZURE_OPENAI_ENDPOINT not found in environment variables")
+
+    # DSPy/LiteLLM convention: prefix model with 'azure/' to trigger Azure logic
+    full_model_name = f"azure/{deployment_name}"
+
+    return dspy.LM(
+        model=full_model_name,
+        api_key=api_key,
+        api_base=endpoint,  # Maps to Azure Endpoint
+        api_version=api_version,
+        max_tokens=max_tokens,
+    )
+
+
+def setup_anthropic_lm(
+    model: str = "claude-3-haiku-20240307", max_tokens: int = 1000
+) -> dspy.LM:
     """Set up Anthropic language model."""
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
         raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
 
-    return dspy.LM(
-        model=f"anthropic/{model}",
-        api_key=api_key,
-        max_tokens=max_tokens
-    )
+    return dspy.LM(model=f"anthropic/{model}", api_key=api_key, max_tokens=max_tokens)
 
 
 def setup_google_lm(model: str = "gemini-pro", max_tokens: int = 1000) -> dspy.LM:
@@ -55,11 +90,7 @@ def setup_google_lm(model: str = "gemini-pro", max_tokens: int = 1000) -> dspy.L
     if not api_key:
         raise ValueError("GOOGLE_API_KEY not found in environment variables")
 
-    return dspy.LM(
-        model=f"google/{model}",
-        api_key=api_key,
-        max_tokens=max_tokens
-    )
+    return dspy.LM(model=f"google/{model}", api_key=api_key, max_tokens=max_tokens)
 
 
 def setup_default_lm(provider: str = "openai", **kwargs) -> Optional[dspy.LM]:
@@ -67,11 +98,13 @@ def setup_default_lm(provider: str = "openai", **kwargs) -> Optional[dspy.LM]:
     providers = {
         "openai": setup_openai_lm,
         "anthropic": setup_anthropic_lm,
-        "google": setup_google_lm
+        "google": setup_google_lm,
     }
 
     if provider not in providers:
-        print_error(f"Unsupported provider: {provider}. Choose from {list(providers.keys())}")
+        print_error(
+            f"Unsupported provider: {provider}. Choose from {list(providers.keys())}"
+        )
         return None
 
     try:
@@ -81,7 +114,9 @@ def setup_default_lm(provider: str = "openai", **kwargs) -> Optional[dspy.LM]:
         return lm
     except Exception as e:
         print_error(f"Failed to setup {provider} language model: {e}")
-        print_warning("Make sure you have set the appropriate API key in your .env file")
+        print_warning(
+            "Make sure you have set the appropriate API key in your .env file"
+        )
         return None
 
 
@@ -96,15 +131,16 @@ def configure_dspy(lm: Optional[dspy.LM] = None, **kwargs):
 
 class Colors:
     """ANSI color codes for terminal output."""
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKCYAN = '\033[96m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+
+    HEADER = "\033[95m"
+    OKBLUE = "\033[94m"
+    OKCYAN = "\033[96m"
+    OKGREEN = "\033[92m"
+    WARNING = "\033[93m"
+    FAIL = "\033[91m"
+    ENDC = "\033[0m"
+    BOLD = "\033[1m"
+    UNDERLINE = "\033[4m"
 
 
 def print_step(step: str, description: str = ""):
